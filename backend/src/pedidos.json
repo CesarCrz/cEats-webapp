@@ -1,1 +1,33 @@
-[]
+[
+  {
+    "action": "nuevoPedido",
+    "orderId": "SORU02",
+    "orderToken": "Ad9IHtH4Xc0l3024ZhnyEzPl7k1enM23JMWsQsenaa0IAQ==",
+    "deliverOrRest": "recoger",
+    "name": "Dani",
+    "numero": "5213321854956",
+    "sucursal": "ITESO",
+    "deliverTo": "",
+    "address": "",
+    "productDetails": "[{\"name\":\"Sushi culichi\",\"quantity\":1,\"total\":100,\"currency\":\"MXN\"},{\"name\":\"Sushi Mar y tierra\",\"quantity\":2,\"total\":218,\"currency\":\"MXN\"}]",
+    "total": 318,
+    "currency": "MXN",
+    "specs": "Sin surimi por favor",
+    "payMethod": "tarjeta",
+    "codigo": "SORU02",
+    "pedido": [
+      {
+        "name": "Sushi culichi",
+        "quantity": 1,
+        "total": 100,
+        "currency": "MXN"
+      },
+      {
+        "name": "Sushi Mar y tierra",
+        "quantity": 2,
+        "total": 218,
+        "currency": "MXN"
+      }
+    ]
+  }
+]
