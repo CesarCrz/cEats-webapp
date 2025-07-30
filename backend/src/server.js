@@ -200,31 +200,33 @@ app.post('/api/pedidos/:codigo/estado', async (req, res) =>{
 
   res.sendStatus(201);
 });*/
-
 app.post('/api/pedidos/:sucursal', async (req, res) =>{
     const { sucursal } = req.params; //Obtenemos la sucursal de la URL
     const datosEntrada = req.body; //Obtenemos los datos entrantes
 
+    // -- logica de Normalización y Mapeo (Ajustado para ambos tipos de pedidos (recoger o domicilio) )
+    
+    const tipoPedido = datosEntrada.deliverOrRest ? datosEntrada.deliverOrRest: 'desconocido'; 
     //Vamos a mapear los campos de 'datosEntrada' a las propiedades esperadas en el objeto pedido y que coinciden con las columnas de la BD
 
     const pedidoParaDB = {
       codigo : datosEntrada.orderId,
-      deliver_or_rest: datosEntrada.deliverOrRest,
+      deliver_or_rest: tipoPedido,
       estado: datosEntrada.estado || 'Pendiente', //Estado 'Pendiente' por default
       nombre: datosEntrada.name,
       celular: datosEntrada.numero,
       sucursal: sucursal,
       pedido: datosEntrada.productDetails,
       instrucciones: datosEntrada.specs,
-      entregar_a: datosEntrada.deliverTo ? datosEntrada.deliverTo : '',
-      domicilio: datosEntrada.address ? datosEntrada.address : '',
+      entregar_a: tipoPedido === 'recoger' ? datosEntrada.deliverTo: datosEntrada.name,
+      domicilio: tipoPedido === 'domicilio' ? datosEntrada.address: null,
       total: datosEntrada.total,
       currency: datosEntrada.currency,
-      pago: datosEntrada.payMethod,
+      pago: tipoPedido === 'domicilio' ? datosEntrada.payMethod : null,
       // Generemos fecha y hora a partir de la hora mexicana 'America/Mexico_City'
       fecha: new Date().toLocaleDateString('es-MX', {timeZone: 'America/Mexico_City'}).split('/').reverse().join('-'),
-      time: new Date().toLocaleTimeString('es-MX', {timeZone: 'America/Mexico_City', hour12: false}), //se guarda en formato 24 horas (PREGUNTAR A DANI SI HAY PROBLEMA CON ESTO)
-      tiempo: '' 
+      hora: new Date().toLocaleTimeString('es-MX', {timeZone: 'America/Mexico_City', hour12: false}), //se guarda en formato 24 horas (PREGUNTAR A DANI SI HAY PROBLEMA CON ESTO)
+      tiempo: tiempo ? tiempo: '' 
     };
 
     if (typeof pedidoParaDB.pedido !== 'string'){
@@ -232,10 +234,20 @@ app.post('/api/pedidos/:sucursal', async (req, res) =>{
       return res.status(400).json({success: false, error: `El formato de 'productDetails' debe ser un string`});
     }
 
-    if (!pedidoParaDB.codigo || !pedidoParaDB.deliver_or_rest || !pedidoParaDB.nombre || !pedidoParaDB.celular || !pedidoParaDB.sucursal || !pedidoParaDB.pedido || !pedidoParaDB.instrucciones || !pedidoParaDB.total || !pedidoParaDB.currency || !pedidoParaDB.pago) {
-      console.error(`Faltan campos obligatorios para crear el pedido\n\n El formato a recibir debe ser: ${JSON.stringify(pedidoParaDB, null, 2)}`);
-      console.error(`\nY LOS DATOS RECIBIDOS FUERON: \n\n ${JSON.stringify(datosEntrada)}`);
-      return res.status(400).json({success: false, error: 'Faltaron datos esenciales para poder crear el pedido'});
+    if (!pedidoParaDB.codigo || !pedidoParaDB.deliverOrRest || !pedidoParaDB.estado || !pedidoParaDB.name || !pedidoParaDB.numero || !pedidoParaDB.sucursal || !pedidoParaDB.pedido || !pedidoParaDB.total || !pedidoParaDB.currency || !pedidoParaDB.pago || !pedidoParaDB.fecha || !pedidoParaDB.hora || pedidoParaDB.entregarA === undefined) { // Validar campos clave y que 'entregarA' este definido
+      console.error('Intento de crear pedido con datos faltantes (despues de mapeo):', pedidoParaDB);
+      console.error('Datos recibidos:', datosEntrada); 
+      return res.status(400).json({ success: false, error: 'Faltan datos requeridos para crear el pedido (codigo, deliverOrRest, estado, name, numero, sucursal, pedido, total, currency, pago, fecha, hora, entregarA son minimos).' });
+  }
+  
+    if (tipoPedido === 'domicilio' && !pedidoParaDB.domicilio) {
+      console.error('Pedido a domicilio sin direccion:', pedidoParaDB);
+      return res.status(400).json({ success: false, error: 'Se requiere domicilio para pedidos a domicilio.' });
+  } 
+
+    if (tipoPedido === 'recoger' && !pedidoParaDB.entregar_a){
+      console.error(`El pedido: ${pedidoParaDB.codigo} a recoger debe incluir nombre de la persona a entregar:`);
+      return res.status(400).json({ success: false, error: 'Se requiere nombre de la persona a entregar para pedidos a recoger'});
     }
 
     //Creamos la consulta SQL para insertar un nuevo pedido en la BD
@@ -265,7 +277,7 @@ app.post('/api/pedidos/:sucursal', async (req, res) =>{
       pedidoParaDB.currency,
       pedidoParaDB.pago,
       pedidoParaDB.fecha,
-      pedidoParaDB.time,
+      pedidoParaDB.hora,
       pedidoParaDB.tiempo
     ];
 
@@ -275,14 +287,13 @@ app.post('/api/pedidos/:sucursal', async (req, res) =>{
       const codigoPedidoInsertado = result.rows[0].codigo;
 
       //Sincronizacion y Notificación despues de la inserción exitosa en la BD
-      console.log(`Pedido ${codigoPedidoInsertado} insertado correctamente en la BD`);
-      res.status(201).json({success: true, codigo: codigoPedidoInsertado, mensaje: `Se ha insertado con exito el pedido: ${codigoPedidoInsertado} en la BD`});
+      res.status(201).json({succes: true, codigo: codigoPedidoInsertado, mensaje: `Se ha insertado con exito el pedido: ${codigoPedidoInsertado} en la BD`});
     } catch (error) {
       console.error(`Error al insertar el pedido en la base de Datos ---ERROR: ${error}`);
       if (error.code === '23505'){
-        return res.status(409).json({success: false, error: `Ya existe un pedido para el codigo: ${pedidoParaDB.codigo}`});
+        return res.status(409).json({succes: false, error: `Ya existe un pedido para el codigo: ${pedidoParaDB.codigo}`});
       }
-      res.status(500).json({success: false, error: 'Error interno del servidor al crear el pedido'});
+      res.status(500).json({succes: false, error: 'Error interno del servidor al crear el pedido'}); 
     }
 
 
