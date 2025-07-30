@@ -1,0 +1,1 @@
+console.log('\n⚠️ Recuerda crear tu archivo .en con tus variables de entorno necesarias, por ahora {BD} unicamente...');

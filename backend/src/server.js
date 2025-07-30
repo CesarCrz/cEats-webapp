@@ -47,6 +47,7 @@ app.get('/main/pedidos/:sucursal', (req, res) => {
   res.sendFile(path.join(FRONTEND_SRC, 'pages', 'main.html'));
 });
 
+/*
 function cargarPedidos() {
   if (!fs.existsSync(PEDIDOS_FILE)) return []
   const raw = fs.readFileSync(PEDIDOS_FILE, 'utf-8');
@@ -55,7 +56,40 @@ function cargarPedidos() {
 
 function guardarPedidos(pedidos) {
   fs.writeFileSync(PEDIDOS_FILE, JSON.stringify(pedidos, null, 2), 'utf-8');
-}
+}*/
+
+// -- Endpoint para obtener los pedidos por sucursal
+
+app.get('/api/pedidos/sucursal/:sucursal', async (req, res) => {
+    //obtenemos el valor del del parametro ':sucursal' de la URL
+    const sucursal = req.params.sucursal;
+
+    // paso de validacion para asegurarnos  que se proporciono el nombre de la sucursal
+    
+    if (!sucursal) return res.status(400).json({ success: false, error: `Se requiere especificar la sucursal para obtener los pedidos`});
+
+    try {
+      // consulta SQL para obtener pedidos filtrador por Sucursal
+      // seleccionamos todas las columnas ("*") de la tabla 'pedidos'
+      // ordena los resultados por la columna 'time' de forma DESCENDENTE - ESC
+
+      const queryText = 'SELECT * FROM pedidos WHERE sucursal = $1 ORDER BY hora DESC';
+      //usamos placeholder
+      const values = [sucursal];
+
+      const result = await db.query(queryText, values);
+
+      const pedidosFiltrados = result.rows;
+
+      res.json(pedidosFiltrados)
+
+    } catch (error) {
+      console.error(`Error al obtener los pedidos de la sucursal ${sucursal} de la BD -- ERROR: ${error}`);
+      res.status(500).json({success: false, error: 'Error interno del servidor al obtener los pedidos por sucursal'});
+    }    
+
+});
+
 
 /*app.post('/api/pedidos/:codigo/estado', (req, res) => {
   const { codigo } = req.params;
