@@ -359,7 +359,7 @@ app.get('/api/obtenerPedidos', async (req, res) => {
   }
 });
 
-app.delete('/api/pedidos/:codigo', (req, res) => {
+/*app.delete('/api/pedidos/:codigo', (req, res) => {
   const codigo = req.params.codigo;
   let pedidos =cargarPedidos();
 
@@ -374,7 +374,40 @@ app.delete('/api/pedidos/:codigo', (req, res) => {
   io.emit('pedido_eliminado', eliminado);
 
   res.json({ success: true, pedido: eliminado });
-})
+})*/
+
+app.delete('/api/pedidos/_codigo', async (req, res) => {
+    //obtiene el valro del parametro :codigo de la URL
+    const codigoPedido = req.params.codigo;
+    
+    if (!codigoPedido) return res.status(400).json({success: false, error: 'Se requiere un pedido para eliminar'});
+    try {
+      //antes de permititr eliminar vamos a verificar si el usuario es administrador o autorizado para completar esta accion
+      //Ejemplo (Esto lo implementaremos mas adelante)
+      // if (!req.user || req.user.role !== 'admin') return res.status(403).json({success: false, error: 'No tienes autorizacion para completar esta acción'});}
+
+      //consulta SQL para eliminar un pedido específico
+      const queryText = 'DELETE FROM pedido WHERE codigo =$1';
+      const values = [codigoPedido];
+
+      //EJECUTAMOS EL SQL CON SUS PARAMETROS
+      const result = await db.query(queryText, values);
+
+      if (result.rowCount > 0) {
+        // si se eliminó al menos una fila
+        console.log(`Pedido con codigo ${codigoPedido} elimiando con éxito de la BD`);
+        res.json({success: true, mensaje: `Pedido con codigo ${codigoPedido} eliminado con éxito`});
+      } else {
+        //Si rowCount es 0 ningu pedido con ese codigo fue elimiando
+        res.status(404).json({success: false, error: `Pedido con codigo ${codigoPedido} no encontrado para eliminar`});
+      }
+
+    } catch (error) {
+      console.error(`Error al eliminar el pedido ${codigoPedido} --- Error: ${error}`);
+      res.status(500).json({success: false, error: `Error interno del servidor`});
+    }
+
+});
 
 app.post('/api/cancelarPedido', async (req, res) => {
   const { codigoPedido, motivo } = req.body;

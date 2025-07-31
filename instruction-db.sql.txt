@@ -1,0 +1,125 @@
+--- Debes iniciar iniciar una BD con PostgresSQL (te recomiend DBeaver)
+
+-- init_db.sql
+
+    -- Eliminar la tabla si ya existe (util para empezar desde cero)
+    DROP TABLE IF EXISTS pedidos;
+
+    -- Crear la tabla pedidos
+    CREATE TABLE pedidos (
+        codigo VARCHAR(255) PRIMARY KEY,
+        deliver_or_rest VARCHAR(50),
+        estado VARCHAR(50),
+        nombre VARCHAR(255),
+        celular VARCHAR(50),
+        sucursal VARCHAR(255),
+        pedido TEXT, -- Usamos TEXT para el JSON string
+        instrucciones TEXT,
+        entregar_a VARCHAR(255),
+        domicilio TEXT,
+        total NUMERIC(10, 2),
+        currency VARCHAR(10),
+        pago VARCHAR(100),
+        fecha DATE,
+        hora TIME, -- Corregido a 'hora'
+        tiempo VARCHAR(50) -- O el tipo que hayas decidido para 'tiempo'
+    );
+
+    -- Opcional: Crear indices para columnas por las que filtras o buscas a menudo
+    -- Esto puede mejorar el rendimiento en SELECTs.
+    CREATE INDEX idx_pedidos_sucursal ON pedidos (sucursal);
+    CREATE INDEX idx_pedidos_estado ON pedidos (estado);
+    CREATE INDEX idx_pedidos_fecha ON pedidos (fecha);
+
+    -- Comentarios (opcional pero bueno)
+    COMMENT ON TABLE pedidos IS 'Tabla para almacenar los pedidos de restaurantes.';
+    COMMENT ON COLUMN pedidos.codigo IS 'Codigo unico del pedido (Primary Key).';
+    -- ... añade comentarios para otras columnas si quieres ...
+
+
+
+-- Insertar registros iniciales
+
+    -- Pedido ITESO (domicilio)
+    INSERT INTO pedidos (
+        codigo, deliver_or_rest, estado, nombre, celular, sucursal, pedido, 
+        instrucciones, entregar_a, domicilio, total, currency, pago, fecha, hora, tiempo
+    ) VALUES (
+        'SORU01', -- Codigo unico
+        'domicilio',
+        'En Preparacion',
+        'Dany',
+        '5213321854956',
+        'ITESO',
+        '[{"name":"Sushi culichi","quantity":2,"total":200,"currency":"MXN"},{"name":"Sushi Mar y tierra","quantity":2,"total":218,"currency":"MXN"}]', -- JSON string
+        'Soya con chile, sin alga y soy alerigico al camaron',
+        'Dany (ITESO Dom)', -- entregar_a = nombre si es domicilio
+        'Av. San Blas 2468', -- Domicilio
+        418.00,
+        'MXN',
+        'tarjeta', -- Pago (si aplica a domicilio)
+        '2023-10-27', -- Fecha (asegura formato YYYY-MM-DD)
+        '14:30:00', -- Hora (asegura formato HH:MM:SS)
+        NULL -- Tiempo inicial (null)
+    );
+
+    -- Pedido ITESO (recoger)
+    INSERT INTO pedidos (
+        codigo, deliver_or_rest, estado, nombre, celular, sucursal, pedido, 
+        instrucciones, entregar_a, domicilio, total, currency, pago, fecha, hora, tiempo
+    ) VALUES (
+        'ITESO_REC01', -- Codigo unico
+        'recoger',
+        'Listo para Recoger',
+        'Paulo (ITESO Rec)',
+        '5213333899410',
+        'ITESO', -- Sucursal ITESO
+        '[{"name":"Sushi Mar y tierra","quantity":3,"total":327,"currency":"MXN"}]',
+        'Soya con chile, sin alga y soy alerigico al camaron',
+        'Ferxxo (ITESO Rec)', -- entregar_a (si es recoger)
+        NULL, -- Domicilio (null si es recoger)
+        327.00,
+        'MXN',
+        NULL, -- Pago (null si es recoger)
+        '2023-10-27', -- Fecha
+        '15:00:00', -- Hora
+        '55' -- Tiempo (si quieres ponerle un valor inicial, si no NULL)
+    );
+
+    -- Pedido TESORO (domicilio)
+    INSERT INTO pedidos (
+        codigo, deliver_or_rest, estado, nombre, celular, sucursal, pedido, 
+        instrucciones, entregar_a, domicilio, total, currency, pago, fecha, hora, tiempo
+    ) VALUES (
+        'TESORO_DOM01', -- Codigo unico
+        'domicilio',
+        'En Preparacion',
+        'César,
+        '3326232840',
+        'TESORO',
+        '[{"name":"Sushi Culichi","quantity":1,"total":100,"currency":"MXN"}]',
+        'Extra queso',
+        'César',
+        'Av. San Blas 2468',
+        100.00,
+        'MXN',
+        'efectivo', -- Pago (si aplica a domicilio)
+        '2023-10-27', -- Fecha
+        '15:30:00', -- Hora
+        NULL -- Tiempo inicial (null)
+    );
+
+    -- Opcional: Otros pedidos de prueba si quieres mas variedad
+    -- INSERT INTO pedidos (...) VALUES (...);
+
+
+-- PARA CREAR LA TABLA DE USUARIOS
+
+    CREATE TABLE usuarios (
+        email VARCHAR(255) PRIMARY KEY, -- Usar email como Primary Key (debe ser unico y no nulo)
+        password_hash VARCHAR(255) NOT NULL, -- Para almacenar la contraseña hasheada
+        role VARCHAR(50) NOT NULL, -- Rol del usuario (admin, sucursal, etc.)
+        sucursal VARCHAR(255), -- Sucursal asociada al usuario (puede ser NULL para admin)
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, -- Fecha de creacion (opcional)
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP  -- Fecha de actualizacion (opcional)
+    );
